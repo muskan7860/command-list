@@ -1,0 +1,20 @@
+# 1. Stop and remove the crashed container
+docker stop jenkins 2>/dev/null
+docker rm jenkins 2>/dev/null
+
+# 2. Fix permissions on the volume data (Jenkins user ID = 1000)
+sudo chown -R 1000:1000 /var/lib/docker/volumes/jenkins-home/_data
+
+# 3. Also fix docker.sock permissions (just in case)
+sudo chmod 666 /var/run/docker.sock
+
+# 4. Start Jenkins with memory flag
+docker run -d \
+  --name jenkins \
+  --network host \
+  --dns 8.8.8.8 \
+  --dns 1.1.1.1 \
+  -m 2g \
+  -v jenkins-home:/var/jenkins_home \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  muskanpatel71198/jenkins-custom:lts
