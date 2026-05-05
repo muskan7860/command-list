@@ -1,0 +1,21 @@
+✅ Step 2: Update ALL Manifest Files to Use This Namespace
+# Run this command to add namespace to all YAML files:
+for file in kubernetes-manifests/*.yaml; do
+  echo "✏️ Adding namespace to $file"
+  # Add namespace under metadata if not already present
+  if ! grep -q "namespace:" "$file"; then
+    sed -i '/^metadata:/a\  namespace: Micro-app' "$file"
+  fi
+done
+------------------------------
+verify
+# Check one file:
+grep -A2 "metadata:" kubernetes-manifests/frontend.yaml
+# Should show:
+# metadata:
+#   namespace: Micro-app
+#   name: frontend
+-----------------------------
+git add kubernetes-manifests/
+git commit -m "fix: add namespace Micro-app to all manifests"
+git push origin main
