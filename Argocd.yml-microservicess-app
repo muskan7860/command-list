@@ -1,0 +1,123 @@
+cat <<EOF | kubectl apply -f -
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: microservices-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/muskan7860/microservices-demo.git
+    targetRevision: main
+    path: kubernetes-manifests
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: micro-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - RespectIgnoreDifferences=true
+EOF
+-------------------------------------------------------------------
+# 1. Hard refresh (clears Redis cache & re-evaluates all resources)
+kubectl patch application microservices-app -n argocd \
+  --type merge \
+  -p '{"metadata": {"annotations": {"argocd.argoproj.io/refresh": "hard"}}}'
+
+# 2. Wait 30 seconds for controller to process
+sleep 30
+
+# 3. Check final status
+kubectl get application microservices-app -n argocd \
+  -o jsonpath='Sync: {.status.sync.status} | Health: {.status.health.status}\n'
+  ----------------------------------------------------------------------------------------
+ Option
+Purpose
+Why It Helps
+PrunePropagationPolicy=foreground
+Deletes resources in correct dependency order
+Prevents cascading failures during cleanup
+PruneLast=true
+Prunes deleted resources after all other sync steps
+Ensures new resources are ready before old ones are removed
+RespectIgnoreDifferences=true
+Ignores status/runtime fields during diff
+Prevents false "OutOfSync" from Kubernetes adding runtime data
+CreateNamespace=true
+Auto-creates micro-app if missing
+Eliminates namespace-related sync failures
+
+-----------------------------------------------------------------------------------------
+# 1. Delete ONLY the ArgoCD app object (your pods/services stay running!)
+kubectl delete application microservices-app -n argocd
+
+# 2. Wait 5 seconds
+sleep 5
+
+# 3. Recreate with the updated spec
+cat <<EOF | kubectl apply -f -
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: microservices-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/muskan7860/microservices-demo.git
+    targetRevision: main
+    path: kubernetes-manifests
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: micro-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - RespectIgnoreDifferences=true
+EOF
+
+# 4. Wait for fresh evaluation
+sleep 30
+
+# 5. Verify clean status
+kubectl get application microservices-app -n argocd
+-------------------------------------------------------------
+📄 YAML FILE PARTS:
+━━━━━━━━━━━━━━━━━━
+apiVersion/kind     = "This is an ArgoCD Application"
+metadata.name       = "Call this app: microservices-app"
+source.repoURL      = "Watch THIS GitHub repo for changes"
+source.path         = "Look in THIS folder for instructions"
+destination.namespace = "Deploy toys to THIS play area"
+syncPolicy.automated = "Work automatically, no button pushing!"
+syncPolicy.prune    = "Remove toys not in manual anymore"
+syncPolicy.selfHeal = "Fix broken toys automatically"
+syncOptions.*       = "Extra safety rules to prevent stuck states"
+
+🔧 COMMANDS EXPLAINED:
+━━━━━━━━━━━━━━━━━━━━
+kubectl apply -f -  = "Give this YAML to ArgoCD to read"
+kubectl patch ... refresh:hard = "Forget old notes, re-read everything!"
+sleep 30            = "Wait for robot to think"
+kubectl get app     = "Ask ArgoCD: what's the status now?"
+curl test           = "Knock on app door: is anyone home?"
+
+✅ EXPECTED RESULTS:
+━━━━━━━━━━━━━━━━━━
+kubectl get app → Sync: Synced, Health: Healthy
+curl test → HTTP: 200
+kubectl get pods → All Running 1/1
