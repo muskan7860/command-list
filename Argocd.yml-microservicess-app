@@ -1,3 +1,12 @@
+# VIEW the current spec:
+kubectl get application microservices-app -n argocd -o yaml
+
+# EDIT it directly (opens nano/vim):
+kubectl edit application microservices-app -n argocd
+
+# APPLY an updated spec from a file:
+kubectl apply -f /tmp/my-updated-app.yaml -n argocd
+---------------------------------
 cat <<EOF | kubectl apply -f -
 apiVersion: argoproj.io/v1alpha1
 kind: Application
