@@ -1,0 +1,2 @@
+get svc info
+kubectl get svc frontend -n micro-app -o jsonpath='{.spec.clusterIP}:{.spec.ports[0].port}'
